@@ -180,5 +180,10 @@
                 </plugins>
             </build>
         </profile>
-    </profiles>
+    </profiles><repositories>
+    <repository>
+	    <id>deployment</id>
+	    <url>http://localhost:8081/repository/mobilebank-snap</url>
+	</repository>	    
+	</repositories>	    
 </project>
