@@ -1,0 +1,67 @@
+Jenkinsfile -
+
+pipeline {
+        agent any
+		stages {
+		        stage ('Code-checkout') {
+				    steps {
+					    script {
+						    git 'https://github.com/pshintre/Jenkins-Maven-SonarQube-Integration.git';
+						}
+					}	
+				}
+				stage ('Build') {
+				    steps {
+                     	script {
+						     bat 'mvn clean package -DskipTests=true'
+							}
+						}
+					}
+				stage ('SonarQube analysis') {
+				    steps {
+					    withSonarQubeEnv('SonarQube-Server') {
+						     bat 'mvn sonar:sonar'
+							}
+						}
+					}
+				stage ('Upload war file to Nexus repository') {
+			        steps {
+					    script {
+						     def mavenPom = readMavenPom file: 'pom.xml'
+					         nexusArtifactUploader artifacts: [
+						          [
+							        artifactId: 'javaee7-simple-sample', 
+				                    classifier: '', 
+				                    file: 'target/javaee7-simple-sample.war', 
+				                    type: 'war'
+							    ]
+						    ],
+						    credentialsId:'nexus3', 
+			                groupId: 'org.javaee7.sample', 
+			                nexusUrl: 'localhost:8081', 
+			                nexusVersion: 'nexus3', 
+			                protocol: 'http', 
+			                repository: 'mobilebank-snap', 
+			                //version: '1.0-SNAPSHOT'
+							version: "${mavenPom.version}"
+						}	
+				    }
+			    }
+				stage ('DownloadArtifact') {
+				    steps {
+					   bat "curl http://localhost:8081/repository/mobilebank-snap/org/javaee7/sample/javaee7-simple-sample/2.0-SNAPSHOT/javaee7-simple-sample-2.0-20210209.130748-1.war --output my.war"
+			        }
+		        }
+		        stage ('DeployToTomcat') {
+                   steps {
+                       deploy adapters: [tomcat8(credentialsId: 'Tomcat8', path: '', url: 'http://localhost:8084')], contextPath: 'my', onFailure: false, war: 'my.war'				   
+	                }
+                }
+            }
+    }
+	
+	//install nexus artifact uploader plugin in jenkins
+    //install pipeline utility steps plugin in jenkins
+	//while giving nexus credentials to Jenkins, provide nexus repository username and password (this issue occured while uploading war file to repository) 
+	
+					
